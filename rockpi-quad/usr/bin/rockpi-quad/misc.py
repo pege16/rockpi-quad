@@ -23,6 +23,34 @@ cmds = {
 lv2dc = OrderedDict({'lv3': 0, 'lv2': 0.25, 'lv1': 0.5, 'lv0': 0.75})
 
 
+class CompatOutputLine:
+    def __init__(self, chip_name, line_number, consumer):
+        self.line_number = int(line_number)
+        self.chip = gpiod.Chip(chip_name)
+        self.req = None
+        self.line = None
+
+        if hasattr(self.chip, 'get_line'):
+            self.line = self.chip.get_line(self.line_number)
+            self.line.request(consumer=consumer, type=gpiod.LINE_REQ_DIR_OUT)
+        else:
+            settings = gpiod.LineSettings(direction=gpiod.line.Direction.OUTPUT)
+            self.req = self.chip.request_lines(consumer=consumer, config={self.line_number: settings})
+
+    def set_value(self, value):
+        if self.line is not None:
+            self.line.set_value(int(value))
+        else:
+            val = gpiod.line.Value.ACTIVE if int(value) else gpiod.line.Value.INACTIVE
+            self.req.set_value(self.line_number, val)
+
+    def get_value(self):
+        if self.line is not None:
+            return self.line.get_value()
+        val = self.req.get_value(self.line_number)
+        return 1 if val == gpiod.line.Value.ACTIVE else 0
+
+
 def check_output(cmd):
     return subprocess.check_output(cmd, shell=True).decode().strip()
 
@@ -99,9 +127,7 @@ def read_key(pattern, size):
     LINE_NUMBER = os.environ['BUTTON_LINE']
 
     s = ''
-    chip = gpiod.Chip(gpio_chip_name(CHIP_NAME))
-    line = chip.get_line(int(LINE_NUMBER))
-    line.request(consumer='hat_button', type=gpiod.LINE_REQ_DIR_OUT)
+    line = CompatOutputLine(gpio_chip_name(CHIP_NAME), LINE_NUMBER, 'hat_button')
     line.set_value(1)
 
     while True:
@@ -164,12 +190,9 @@ def get_func(key):
 
 
 def disk_turn_on():
-    chip = gpiod.Chip(gpio_chip_name(os.environ['SATA_CHIP']))
-    line1 = chip.get_line(int(os.environ['SATA_LINE_1']))
-    line1.request(consumer='SATA_LINE_1', type=gpiod.LINE_REQ_DIR_OUT)
+    line1 = CompatOutputLine(gpio_chip_name(os.environ['SATA_CHIP']), os.environ['SATA_LINE_1'], 'SATA_LINE_1')
     line1.set_value(1)
-    line2 = chip.get_line(int(os.environ['SATA_LINE_2']))
-    line2.request(consumer='SATA_LINE_2', type=gpiod.LINE_REQ_DIR_OUT)
+    line2 = CompatOutputLine(gpio_chip_name(os.environ['SATA_CHIP']), os.environ['SATA_LINE_2'], 'SATA_LINE_2')
     line2.set_value(1)
 
 

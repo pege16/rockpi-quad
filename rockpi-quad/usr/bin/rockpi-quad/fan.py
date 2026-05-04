@@ -4,8 +4,6 @@ import time
 import traceback
 import threading
 
-import gpiod
-
 import misc
 
 pin = None
@@ -61,8 +59,7 @@ class Gpio:
 
     def __init__(self, period_s):
         chip = misc.gpio_chip_name(os.environ['FAN_CHIP'])
-        self.line = gpiod.Chip(chip).get_line(int(os.environ['FAN_LINE']))
-        self.line.request(consumer='fan', type=gpiod.LINE_REQ_DIR_OUT)
+        self.line = misc.CompatOutputLine(chip, os.environ['FAN_LINE'], 'fan')
         self.value = [period_s / 2, period_s / 2]
         self.period_s = period_s
         self.thread = threading.Thread(target=self.tr, daemon=True)
