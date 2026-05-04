@@ -60,7 +60,8 @@ class Gpio:
             time.sleep(self.value[1])
 
     def __init__(self, period_s):
-        self.line = gpiod.Chip(os.environ['FAN_CHIP']).get_line(int(os.environ['FAN_LINE']))
+        chip = misc.gpio_chip_name(os.environ['FAN_CHIP'])
+        self.line = gpiod.Chip(chip).get_line(int(os.environ['FAN_LINE']))
         self.line.request(consumer='fan', type=gpiod.LINE_REQ_DIR_OUT)
         self.value = [period_s / 2, period_s / 2]
         self.period_s = period_s

@@ -53,7 +53,7 @@ def read_conf():
 
     try:
         cfg = ConfigParser()
-        cfg.read('/etc/rockpi-penta.conf')
+        cfg.read('/etc/rockpi-quad.conf')
         # fan
         conf['fan']['lv0'] = cfg.getfloat('fan', 'lv0')
         conf['fan']['lv1'] = cfg.getfloat('fan', 'lv1')
@@ -99,7 +99,7 @@ def read_key(pattern, size):
     LINE_NUMBER = os.environ['BUTTON_LINE']
 
     s = ''
-    chip = gpiod.Chip(str(CHIP_NAME))
+    chip = gpiod.Chip(gpio_chip_name(CHIP_NAME))
     line = chip.get_line(int(LINE_NUMBER))
     line.request(consumer='hat_button', type=gpiod.LINE_REQ_DIR_OUT)
     line.set_value(1)
@@ -164,12 +164,22 @@ def get_func(key):
 
 
 def disk_turn_on():
-    line1 = gpiod.Chip(os.environ['SATA_CHIP']).get_line(int(os.environ['SATA_LINE_1']))
+    chip = gpiod.Chip(gpio_chip_name(os.environ['SATA_CHIP']))
+    line1 = chip.get_line(int(os.environ['SATA_LINE_1']))
     line1.request(consumer='SATA_LINE_1', type=gpiod.LINE_REQ_DIR_OUT)
     line1.set_value(1)
-    line2 = gpiod.Chip(os.environ['SATA_CHIP']).get_line(int(os.environ['SATA_LINE_2']))
+    line2 = chip.get_line(int(os.environ['SATA_LINE_2']))
     line2.request(consumer='SATA_LINE_2', type=gpiod.LINE_REQ_DIR_OUT)
     line2.set_value(1)
+
+
+def gpio_chip_name(chip):
+    chip = str(chip)
+    if chip.isdigit():
+        return f'/dev/gpiochip{chip}'
+    if chip.startswith('gpiochip'):
+        return f'/dev/{chip}'
+    return chip
 
 
 conf = {'disk': [], 'idx': mp.Value('d', -1), 'run': mp.Value('d', 1)}
